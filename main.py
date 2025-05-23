@@ -1,15 +1,13 @@
 import asyncio
-import inspect
 import os
 import sys
 
-from dotenv import load_dotenv
-from elevenlabs import play, save
-from elevenlabs.client import AsyncElevenLabs
-from openai import OpenAI
-
 from anki.collection import Collection
 from anki.notes import Note
+from dotenv import load_dotenv
+from elevenlabs import save
+from elevenlabs.client import AsyncElevenLabs
+from openai import OpenAI
 
 load_dotenv()
 
@@ -17,13 +15,13 @@ COL_PATH = "/home/bsag/.local/share/Anki2/bsag/collection.anki2"
 
 
 def remove_dupes(col: Collection):
-    query = "deck:essential_french -card:0"
+    query = '"deck:MvJ French" -card:0'
     card_ids = col.find_cards(query)
     col.remove_cards_and_orphaned_notes(card_ids)
 
 
 def normalize_cards(col: Collection):
-    query = "deck:essential_french"
+    query = '"deck:MvJ French"'
     note_ids = col.find_notes(query)
     for note_id in note_ids:
         note = col.get_note(note_id)
@@ -38,7 +36,7 @@ def generate_sentence_and_explanation(col: Collection, note: Note):
         "You are an assistant for beginner French learners.\n\n"
         "Given a French word:\n\n"
         "1. Write a short, simple French example sentence that clearly includes this exact word.\n"
-        "2. Give a brief English explanation of its meaning (not a direct translation). Avoid repeating the word and do not start with phrases like 'It means...' or 'This is a word describing...', give the meaning straight away.\n"
+        "2. Give a brief English explanation of its meaning (not a direct translation). Avoid repeating the word and do not start with phrases like 'It means...' or 'This is a word describing...', give the meaning straight away. If it's a number, use other numbers for reference, not the number itself. Don't use any French words, all words should be in English.\n"
         "3. Separate the sentence and explanation with a '$'. Output nothing else.\n\n"
         f"Word: {note["word"]}"
     )
@@ -106,7 +104,7 @@ async def generate_audios(col: Collection, note: Note):
 
 
 async def fill_n_cards(col: Collection, n: int):
-    note_ids = col.find_notes("deck:essential_french")
+    note_ids = col.find_notes('"deck:MvJ French"')
     count = 0
 
     for note_id in note_ids:
