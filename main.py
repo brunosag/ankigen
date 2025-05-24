@@ -74,9 +74,8 @@ async def generate_audios(col: Collection, note: Note):
     if not note["sentence_audio"]:
         print("\tGenerating sentence audio...")
         result = client.text_to_speech.convert(
-            model_id="eleven_turbo_v2_5",
+            model_id="eleven_multilingual_v2",
             voice_id=voice_id,
-            language_code="fr",
             text=note["sentence"],
         )
         audio_chunks = [chunk async for chunk in result]
