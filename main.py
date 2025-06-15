@@ -5,9 +5,8 @@ import sys
 from anki.collection import Collection
 from anki.notes import Note
 from dotenv import load_dotenv
-from elevenlabs import save
-from elevenlabs.client import AsyncElevenLabs
 from openai import OpenAI
+from google.cloud import texttospeech  # type: ignore
 
 load_dotenv()
 
@@ -52,51 +51,49 @@ def generate_sentence_and_explanation(col: Collection, note: Note):
 
 
 async def generate_audios(col: Collection, note: Note):
-    client = AsyncElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
-    voice_id = "ohItIVrXTBI80RrUECOD"
+    client = texttospeech.TextToSpeechClient()
+    voice = texttospeech.VoiceSelectionParams(
+        language_code="fr-FR",
+        ssml_gender=texttospeech.SsmlVoiceGender.MALE,
+    )
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3
+    )
 
     if not note["word_audio"].startswith("["):
         print("\tGenerating word audio...")
-        result = client.text_to_speech.convert(
-            model_id="eleven_turbo_v2_5",
-            voice_id=voice_id,
-            language_code="fr",
-            text=note["word"],
+        synthesis_input = texttospeech.SynthesisInput(text=note["word"])
+        response = client.synthesize_speech(
+            input=synthesis_input, voice=voice, audio_config=audio_config
         )
-        audio_chunks = [chunk async for chunk in result]
-        word_audio = b"".join(audio_chunks)
-        save(
-            word_audio,
-            os.path.join(col.media.dir(), f"{note.id}_word.mp3"),
-        )
+        with open(os.path.join(col.media.dir(), f"{note.id}_word.mp3"), "wb") as f:
+            f.write(response.audio_content)
         note["word_audio"] = f"[sound:{note.id}_word.mp3]"
 
     if not note["sentence_audio"]:
         print("\tGenerating sentence audio...")
-        result = client.text_to_speech.convert(
-            model_id="eleven_multilingual_v2",
-            voice_id=voice_id,
-            text=note["sentence"],
+        synthesis_input = texttospeech.SynthesisInput(text=note["sentence"])
+        response = client.synthesize_speech(
+            input=synthesis_input, voice=voice, audio_config=audio_config
         )
-        audio_chunks = [chunk async for chunk in result]
-        sentence_audio = b"".join(audio_chunks)
-        save(sentence_audio, os.path.join(col.media.dir(), f"{note.id}_sentence.mp3"))
+        with open(os.path.join(col.media.dir(), f"{note.id}_sentence.mp3"), "wb") as f:
+            f.write(response.audio_content)
         note["sentence_audio"] = f"[sound:{note.id}_sentence.mp3]"
 
     if not note["explanation_audio"]:
         print("\tGenerating explanation audio...")
-        result = client.text_to_speech.convert(
-            model_id="eleven_turbo_v2_5",
-            voice_id=voice_id,
-            language_code="en",
-            text=note["explanation"],
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="en-US",
+            ssml_gender=texttospeech.SsmlVoiceGender.FEMALE,
         )
-        audio_chunks = [chunk async for chunk in result]
-        explanation_audio = b"".join(audio_chunks)
-        save(
-            explanation_audio,
-            os.path.join(col.media.dir(), f"{note.id}_explanation.mp3"),
+        synthesis_input = texttospeech.SynthesisInput(text=note["explanation"])
+        response = client.synthesize_speech(
+            input=synthesis_input, voice=voice, audio_config=audio_config
         )
+        with open(
+            os.path.join(col.media.dir(), f"{note.id}_explanation.mp3"), "wb"
+        ) as f:
+            f.write(response.audio_content)
         note["explanation_audio"] = f"[sound:{note.id}_explanation.mp3]"
 
     col.update_note(note)
