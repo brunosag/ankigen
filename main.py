@@ -100,14 +100,16 @@ async def generate_audios(col: Collection, note: Note):
 
 
 async def fill_n_cards(col: Collection, n: int):
-    note_ids = col.find_notes('"deck:MvJ French"')
+    card_ids = list(col.find_cards('"deck:MvJ French"'))
+    card_ids.sort(key=lambda card_id: col.get_card(card_id).due)
     count = 0
 
-    for note_id in note_ids:
-        note = col.get_note(note_id)
+    for card_id in card_ids:
+        card = col.get_card(card_id)
+        note = card.note()
         generated = False
         if not (note["sentence"] and note["explanation"]):
-            print(note_id)
+            print(note.id)
             generate_sentence_and_explanation(col, note)
             generated = True
         if not (
@@ -116,7 +118,7 @@ async def fill_n_cards(col: Collection, n: int):
             and note["word_audio"].startswith("[")
         ):
             if not generated:
-                print(note_id)
+                print(note.id)
             await generate_audios(col, note)
             generated = True
         if generated:
